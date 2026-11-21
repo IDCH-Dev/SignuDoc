@@ -83,6 +83,7 @@ import {
 import {
   createEmailService,
   EMAIL_NOT_CONNECTED_MESSAGE,
+  createLazyEmailService,
   isEmailNotConnectedError,
   resolveEmailAddresses,
   type EmailService,
@@ -2860,7 +2861,11 @@ export async function sendDraftEnvelope(
     );
   }
 
-  const emailService = createEmailServiceForSending();
+  // Embedded envelopes email no invitations, so they can be sent before email is set up.
+  const emailService =
+    delivery === "embedded"
+      ? createLazyEmailService()
+      : createEmailServiceForSending();
   const storageService = createStorageService();
   const sourcePdfHead = await storageService.headObject(envelope.sourcePdfKey);
 
@@ -3877,7 +3882,8 @@ async function voidSentEnvelopeOnce(
     (signer) => signer.status === "notified" || signer.status === "signed",
   );
   const voidedAt = Math.floor(Date.now() / 1000);
-  const emailService = createEmailService();
+  // Lazy: the notices below already log a failed send, so a missing provider must not stop the void.
+  const emailService = createLazyEmailService();
   const storageService = createStorageService();
   const sourcePdfHead = await storageService.headObject(envelope.sourcePdfKey);
 
